@@ -8,7 +8,7 @@ module parameters
   integer, parameter :: kNum=512       !k bins of Green's function
   integer, parameter            :: MaxOrder=4           ! Max diagram order
 
-  double precision   :: UVScale=1000.0     !the upper bound of energy scale
+  double precision   :: UVScale=100.0     !the upper bound of energy scale
   double precision   :: MaxExtMom=4.0     !the upper bound of energy scale
   double precision   :: DeltaW
   double precision   :: DeltaQ
@@ -85,7 +85,9 @@ program main
         else if (x<2.0/UpdateNum) then
           call ChangeMom()
         else if (x<3.0/UpdateNum) then
-          call ChangeExtMom()
+          call ChangeExtQ()
+        else if (x<4.0/UpdateNum) then
+          call ChangeExtK()
         ! else if (x<2.0/UpdateNum) then
         !   call ChangeScale()
         endif
@@ -119,8 +121,9 @@ program main
         write(*,"(A16, f8.3)") "Increase Order:", AcceptStep(1)/PropStep(1)
         write(*,"(A16, f8.3)") "Decrease Order:", AcceptStep(2)/PropStep(2)
         write(*,"(A16, f8.3)") "Change Mom:", AcceptStep(3)/PropStep(3)
-        write(*,"(A16, f8.3)") "Change ExtK:", AcceptStep(4)/PropStep(4)
-        write(*,"(A16, f8.3)") "Change Scale:", AcceptStep(5)/PropStep(5)
+        write(*,"(A16, f8.3)") "Change ExtQ:", AcceptStep(4)/PropStep(4)
+        write(*,"(A16, f8.3)") "Change ExtK:", AcceptStep(5)/PropStep(5)
+        ! write(*,"(A16, f8.3)") "Change Scale:", AcceptStep(5)/PropStep(5)
         ! write(*, *) "coupling: ", DiffVer(CurrScale)/Norm
         ! write(*, *) "coupling: ", EffVer
         ! write(*, *) "coupling: ", DiffVer/Norm
@@ -153,7 +156,7 @@ program main
       UVScale=UVScale*Kf
       DeltaW=2.0*pi/Beta
 
-      ReWeightFactor(0:2)=(/10.0,1.0,20.0/)
+      ReWeightFactor(0:2)=(/100.0,1.0,20.0/)
 
       PropStep=0.0
       AcceptStep=0.0
@@ -369,7 +372,41 @@ program main
         CurrExtMom=OldExtMom
         LoopMom(:, 1)=ExtMomMesh(:, CurrExtMom)
       endif
+      return
+    end subroutine
+
+    subroutine ChangeExtK()
+      !randomly choose a vertex, change the space variable
+      implicit none
+      double precision :: R, theta
+      double complex :: Weight
+      double precision, dimension(D+1) :: OldK
+      integer :: Num
+      integer, parameter :: Delta=3
+
+      theta=grnd()*2.0*PI
+      if(grnd()<0.5) then
+        Num=2
+      else
+        Num=3
+      endif
+
+      OldK=LoopMom(:, Num)
+
+      LoopMom(1, Num)=Kf*cos(theta)
+      LoopMom(2, Num)=Kf*sin(theta)
   
+      PropStep(5) = PropStep(5) + 1.0
+      Weight = CalcWeight(CurrOrder)
+      R = abs(Weight)/abs(CurrWeight)
+  
+      if(grnd()<R) then
+        AcceptStep(5) = AcceptStep(5)+1.0
+        CurrWeight = Weight
+        ! call UpdateState()
+      else
+        LoopMom(:, Num)=OldK
+      endif
       return
     end subroutine
 
@@ -541,14 +578,26 @@ program main
       ! print *, "green got", Green
       return
     end function
+
+    double precision function Inter(InL, InR, Q)
+      implicit none
+      double precision, dimension(D+1) :: InL, InR, Q, ExtQ
+      ExtQ=InL-InR-Q
+      Inter=8.d0*PI*(1.0/(norm2(Q(1:D))**2+Mass2)-1.0/(norm2(ExtQ(1:D))**2+Mass2))
+      return
+    end function
     
     double complex function Ver4Loop1(Order, InL, InR, Q)
       implicit none
       integer :: Order
-      double precision, dimension(D+1) :: InL, InR, Q
+      double precision, dimension(D+1) :: InL, InR, Q, kL2R, kR2L 
       double precision :: k, freq
-      Ver4Loop1=Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4)+Q, CurrScale, 0)
-      Ver4Loop1=Ver4Loop1-Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4), CurrScale, 0)
+      kL2R=LoopMom(:, 4)
+      kR2L=kL2R-Q
+      Ver4Loop1=Green(kL2R, CurrScale, 0)*Green(kR2L, CurrScale, 0)
+      ! Ver4Loop1=Ver4Loop1-Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4), CurrScale, 0)
+      Ver4Loop1=Ver4Loop1*(Inter(InL, kR2L, Q)*Inter(kL2R, InR, Q)-(8.d0*PI/(norm2(Q(1:D))**2+Mass2))**2)
+      ! Ver4Loop1=Ver4Loop1*(Inter(InL, kR2L, Q)*Inter(kL2R, InR, Q))
 
       ! k=norm2(LoopMom(1:D,4))
       ! freq=LoopMom(D+1, 4)
