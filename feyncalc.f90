@@ -1,14 +1,18 @@
+INCLUDE "rng.f90"
+INCLUDE "angle.f90"
+
 module parameters
   IMPLICIT NONE
   !-- Parameters -------------------------------------------------
   integer, parameter :: D=2           !D=2 or D=3  
-  integer, parameter :: ScaleNum=64    !number of scales
+  integer, parameter :: ScaleNum=256    !number of scales
   integer, parameter :: ExtMomNum=32
+  integer, parameter :: AngleNum0=8
   integer, parameter :: AngleNum=32
-  integer, parameter :: kNum=512       !k bins of Green's function
+  ! integer, parameter :: kNum=512       !k bins of Green's function
   integer, parameter            :: MaxOrder=4           ! Max diagram order
 
-  double precision   :: UVScale=1000.0     !the upper bound of energy scale
+  double precision   :: UVScale=10000.0     !the upper bound of energy scale
   double precision   :: MaxExtMom=4.0     !the upper bound of energy scale
   double precision   :: DeltaW
   double precision   :: DeltaQ
@@ -50,8 +54,6 @@ module parameters
   integer,          parameter :: Mnint  =-2147483647        ! minimum integer
   double precision, parameter :: pi=3.1415926
 end module
-
-INCLUDE "rng.f90"
 
 program main
     use mt19937
@@ -411,7 +413,8 @@ program main
       double precision, dimension(D+1) :: New
       double precision :: Prop, dK, Kamp, theta, phi
       ! dK=1.0*CurrScale
-      dK=1.0*ScaleTable(CurrScale)
+      ! dK=1.0*ScaleTable(CurrScale)
+      dK=1.5*Kf
       Kamp=Kf+(grnd()-0.5)*2.0*dK
       if(Kamp<=0.0) then
         Prop=-1.0
@@ -451,7 +454,8 @@ program main
       double precision, dimension(D+1) :: Old
       double precision :: Prop, dK, Kamp, SinTheta
 
-      dK=1.0*ScaleTable(CurrScale)
+      ! dK=1.0*ScaleTable(CurrScale)
+      dK=1.5*Kf
       Kamp=norm2(Old(1:D))
       if(Kamp<Kf-dK .or. Kamp>Kf+dK) then
         Prop=-1.0
@@ -515,10 +519,11 @@ program main
           new(1:D)=-old(1:D)
           prop=1.0
       endif
+
       if(grnd()<0.5) then
-        new(D+1)=old(D+1)+DeltaW
+        new(D+1)=old(D+1)+DeltaW*int(5*grnd())
       else
-        new(D+1)=old(D+1)-DeltaW
+        new(D+1)=old(D+1)-DeltaW*int(5*grnd())
       endif
     end subroutine
 
@@ -548,7 +553,7 @@ program main
       double precision, dimension(D+1) :: InL, InR, Q
       double precision :: k, freq
       Ver4Loop1=Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4)+Q, CurrScale, 0)
-      Ver4Loop1=Ver4Loop1-Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4), CurrScale, 0)
+      ! Ver4Loop1=Ver4Loop1-Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4), CurrScale, 0)
 
       ! k=norm2(LoopMom(1:D,4))
       ! freq=LoopMom(D+1, 4)
