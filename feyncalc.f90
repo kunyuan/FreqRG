@@ -12,7 +12,7 @@ module parameters
   ! integer, parameter :: kNum=512       !k bins of Green's function
   integer, parameter            :: MaxOrder=4           ! Max diagram order
 
-  double precision   :: UVScale=10000.0     !the upper bound of energy scale
+  double precision   :: UVScale=10.0     !the upper bound of energy scale
   double precision   :: MaxExtMom=4.0     !the upper bound of energy scale
   double precision   :: DeltaW
   double precision   :: DeltaQ
@@ -552,7 +552,7 @@ program main
       integer :: Order
       double precision, dimension(D+1) :: InL, InR, Q
       double precision :: k, freq
-      Ver4Loop1=Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4)+Q, CurrScale, 0)
+      Ver4Loop1=Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4)+Q, CurrScale, 0)/((norm2(LoopMom(:,4)))**2+2.0)
       ! Ver4Loop1=Ver4Loop1-Green(LoopMom(:, 4), CurrScale, 0)*Green(LoopMom(:, 4), CurrScale, 0)
 
       ! k=norm2(LoopMom(1:D,4))
